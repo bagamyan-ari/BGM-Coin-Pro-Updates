@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Yeni surum numarasi (ornek: 1.0.3)"
+        description: "Yeni surum numarasi (ornek: 1.0.4)"
         required: true
-        default: "1.0.3"
+        default: "1.0.4"
 
 permissions:
   contents: write
@@ -23,6 +23,25 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+
+      - name: Surumu kaynak koda uygula
+        shell: powershell
+        run: |
+          $version = "${{ inputs.version }}"
+
+          Write-Host "BGM Coin Pro build version: $version"
+
+          # server.py icindeki APP_VERSION degerini degistir
+          $server = Get-Content "server.py" -Raw
+          $server = $server -replace 'APP_VERSION\s*=\s*["''][^"'']+["'']', "APP_VERSION = `"$version`""
+          Set-Content "server.py" $server -Encoding UTF8
+
+          # update_config.json icindeki current_version degerini degistir
+          $config = Get-Content "update_config.json" -Raw | ConvertFrom-Json
+          $config.current_version = $version
+          $config | ConvertTo-Json -Depth 10 | Set-Content "update_config.json" -Encoding UTF8
+
+          Write-Host "server.py ve update_config.json -> $version"
 
       - name: Python paketlerini kur
         shell: powershell
@@ -55,7 +74,7 @@ jobs:
 
           & $iscc "BGM_Coin_Pro_Installer.iss"
 
-      - name: Installer dosyasini bul ve yeniden adlandir
+      - name: Installer dosyasini bul
         id: installer
         shell: powershell
         run: |
@@ -76,21 +95,21 @@ jobs:
 
           $hash = (Get-FileHash $newPath -Algorithm SHA256).Hash.ToLower()
 
-          Write-Host "Installer: $newPath"
-          Write-Host "SHA256: $hash"
-
           "path=$newPath" >> $env:GITHUB_OUTPUT
           "name=$newName" >> $env:GITHUB_OUTPUT
           "sha256=$hash" >> $env:GITHUB_OUTPUT
 
-      - name: Setup EXE'yi artifact olarak yukle
+          Write-Host "Installer: $newName"
+          Write-Host "SHA256: $hash"
+
+      - name: Setup artifact yukle
         uses: actions/upload-artifact@v4
         with:
           name: BGM-Coin-Pro-Windows-Setup-${{ inputs.version }}
           path: ${{ steps.installer.outputs.path }}
           if-no-files-found: error
 
-      - name: GitHub Release olustur ve Setup EXE'yi yukle
+      - name: GitHub Release olustur
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
@@ -101,9 +120,9 @@ jobs:
 
           gh release create $tag $installer `
             --title "BGM Coin Pro V$version" `
-            --notes "BGM Coin Pro Desktop V$version otomatik guncelleme surumu."
+            --notes "BGM Coin Pro Desktop V$version"
 
-      - name: update_manifest.json guncelle
+      - name: Manifest olustur
         shell: powershell
         run: |
           $version = "${{ inputs.version }}"
@@ -122,11 +141,11 @@ jobs:
 
           $manifest |
             ConvertTo-Json |
-            Set-Content -Path "update_manifest.json" -Encoding UTF8
+            Set-Content "update_manifest.json" -Encoding UTF8
 
-          Get-Content update_manifest.json
+          Get-Content "update_manifest.json"
 
-      - name: Manifest degisikligini GitHub'a kaydet
+      - name: Manifest GitHub'a kaydet
         shell: powershell
         run: |
           git config user.name "github-actions[bot]"
