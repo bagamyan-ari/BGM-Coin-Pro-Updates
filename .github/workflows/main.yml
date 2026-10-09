@@ -1,0 +1,72 @@
+name: Build BGM Coin Pro
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Kaynak kodunu al
+        uses: actions/checkout@v4
+
+      - name: Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Python paketlerini kur
+        shell: powershell
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller pywebview requests
+
+      - name: BGM Coin Pro EXE olustur
+        shell: powershell
+        run: |
+          pyinstaller --clean --noconfirm BGM_Coin_Pro.spec
+
+      - name: BGM Updater EXE olustur
+        shell: powershell
+        run: |
+          pyinstaller --clean --noconfirm BGM_Updater.spec
+
+      - name: Inno Setup ile Setup EXE olustur
+        shell: powershell
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+          }
+
+          if (-not (Test-Path $iscc)) {
+            throw "Inno Setup bulunamadi."
+          }
+
+          & $iscc "BGM_Coin_Pro_Installer.iss"
+
+      - name: Installer dosyasini bul
+        id: installer
+        shell: powershell
+        run: |
+          $file = Get-ChildItem -Path . -Recurse -Filter "BGM_Coin_Pro_Setup_*.exe" |
+            Select-Object -First 1
+
+          if (-not $file) {
+            throw "BGM Coin Pro Setup EXE bulunamadi."
+          }
+
+          Write-Host "Installer bulundu: $($file.FullName)"
+          "path=$($file.FullName)" >> $env:GITHUB_OUTPUT
+
+      - name: Setup EXE'yi artifact olarak yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: BGM-Coin-Pro-Windows-Setup
+          path: ${{ steps.installer.outputs.path }}
+          if-no-files-found: error
