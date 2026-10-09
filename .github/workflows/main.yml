@@ -1,7 +1,12 @@
-name: Build BGM Coin Pro
+name: Build & Release BGM Coin Pro
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Yeni surum numarasi (ornek: 1.0.3)"
+        required: true
+        default: "1.0.3"
 
 permissions:
   contents: write
@@ -50,7 +55,7 @@ jobs:
 
           & $iscc "BGM_Coin_Pro_Installer.iss"
 
-      - name: Installer dosyasini bul
+      - name: Installer dosyasini bul ve yeniden adlandir
         id: installer
         shell: powershell
         run: |
@@ -61,12 +66,78 @@ jobs:
             throw "BGM Coin Pro Setup EXE bulunamadi."
           }
 
-          Write-Host "Installer bulundu: $($file.FullName)"
-          "path=$($file.FullName)" >> $env:GITHUB_OUTPUT
+          $version = "${{ inputs.version }}"
+          $newName = "BGM_Coin_Pro_Setup_$version.exe"
+          $newPath = Join-Path $file.DirectoryName $newName
+
+          if ($file.FullName -ne $newPath) {
+            Copy-Item $file.FullName $newPath -Force
+          }
+
+          $hash = (Get-FileHash $newPath -Algorithm SHA256).Hash.ToLower()
+
+          Write-Host "Installer: $newPath"
+          Write-Host "SHA256: $hash"
+
+          "path=$newPath" >> $env:GITHUB_OUTPUT
+          "name=$newName" >> $env:GITHUB_OUTPUT
+          "sha256=$hash" >> $env:GITHUB_OUTPUT
 
       - name: Setup EXE'yi artifact olarak yukle
         uses: actions/upload-artifact@v4
         with:
-          name: BGM-Coin-Pro-Windows-Setup
+          name: BGM-Coin-Pro-Windows-Setup-${{ inputs.version }}
           path: ${{ steps.installer.outputs.path }}
           if-no-files-found: error
+
+      - name: GitHub Release olustur ve Setup EXE'yi yukle
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = "${{ inputs.version }}"
+          $tag = "v$version"
+          $installer = "${{ steps.installer.outputs.path }}"
+
+          gh release create $tag $installer `
+            --title "BGM Coin Pro V$version" `
+            --notes "BGM Coin Pro Desktop V$version otomatik guncelleme surumu."
+
+      - name: update_manifest.json guncelle
+        shell: powershell
+        run: |
+          $version = "${{ inputs.version }}"
+          $fileName = "${{ steps.installer.outputs.name }}"
+          $sha = "${{ steps.installer.outputs.sha256 }}"
+          $repo = "${{ github.repository }}"
+
+          $downloadUrl = "https://github.com/$repo/releases/download/v$version/$fileName"
+
+          $manifest = [ordered]@{
+            version = $version
+            download_url = $downloadUrl
+            sha256 = $sha
+            notes = "BGM Coin Pro Desktop V$version"
+          }
+
+          $manifest |
+            ConvertTo-Json |
+            Set-Content -Path "update_manifest.json" -Encoding UTF8
+
+          Get-Content update_manifest.json
+
+      - name: Manifest degisikligini GitHub'a kaydet
+        shell: powershell
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add update_manifest.json
+
+          if (git diff --cached --quiet) {
+            Write-Host "Manifest zaten guncel."
+          }
+          else {
+            git commit -m "Update manifest to V${{ inputs.version }}"
+            git push
+          }
