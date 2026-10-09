@@ -1,6 +1,6 @@
-{
-  "version": "1.0.4",
-  "download_url": "",
-  "sha256": "",
-  "notes": "V1.0.4 - Otomatik guncelleme test surumu."
+﻿{
+    "version":  "1.0.4",
+    "download_url":  "https://github.com/bagamyan-ari/BGM-Coin-Pro-Updates/releases/download/v1.0.4/BGM_Coin_Pro_Setup_1.0.4.exe",
+    "sha256":  "0fdbab7d6ea0c9bb56d9c14ec029b9e9f200540cedec9e5e859e004adc07763f",
+    "notes":  "BGM Coin Pro Desktop V1.0.4"
 }
