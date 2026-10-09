@@ -1,0 +1,51 @@
+V0.6.65 BGM TRADER ENGINE V2
+- Trader yorumu artik tek metrik degil; teknik + momentum + hacim yonu + likidite + zamanlama + teyit birlikte okunur.
+- Yuksek VOL alici yonu ile dogrulanmiyorsa risk/celiski sayilir.
+- FIRSAT ve GUVEN ayri kalir; trader karari icin minimum bagimsiz teyit sayisi gerekir.
+- Secili coin yorumunda Olumlu / Risk-Celiski / Karar / Beklenen birlikte yazilir.
+- Ana trader siralamasi korunur; # ↺ ile ana siralamaya donulur; # ve COIN sticky kalir.
+
+BGM COIN PRO V0.6.65
+
+- Piyasa Avantaji 50/50 sahte fallback kaldirildi.
+- Veri yoksa VERI BEKLENIYOR ve —/100 gosterir.
+- BTC ve ETH fiyat + 24s degisim ana ust panele eklendi.
+- BTC/ETH radar dormant filtresinden bagimsiz piyasa paneline alinir.
+- Piyasa Avantaji hatasi Radar taramasini durdurmaz.
+
+
+V0.6.57: BTC/ETH üst kartı seçili piyasadan bağımsız Binance Global BTCUSDT/ETHUSDT verisini kullanır.
+
+V0.6.57: Binance TR fiyatlarında ana TRY fiyatının yanında mini USD referansı gösterilir. Binance Global fiyatları orijinal USDT olarak kalır.
+
+V0.6.57: Varsayilan Firsat Radari siralamasi kalite-oncelikli hale getirildi: radar asamasi > radar/firsat puani > teyit > giris > hazirlik > teknik > hareket. Hareket 100 tek basina ust siraya tasimaz.
+
+V0.6.57: Radar stage bug fixed; weak KIRILIM/DESTEK setups no longer jump to top. BTC/ETH live card always USD. TRY mini USD uses displayed live USDT/TRY reference. Risk gauge and bull/bear scenario panel added.
+
+V0.6.57: Gerçek 24s likidite, sıçrama/kalan potansiyel, Binance Square Fear & Greed, düzenlenebilir sermaye/risk/coin maksimumu.
+
+
+V0.6.57 HOTFIX: Radar taraması tamamlandıktan sonra Binance risk iştahı, BTC/ETH benchmark veya USDT/TRY gibi yardımcı servislerden biri hata verse bile ana tarama artık VERİ HATASI ile düşmez. TR paralel istek sayısı da 6 -> 4 düşürüldü.
+
+V0.6.57: Radar kalite sikilastirma, hacim yonu, Dusenler likidite+tepki, manuel stop/kar hedefleri, kompakt piyasa+AI karti.
+
+
+V0.6.57 BGM TRADER ENGINE V1:
+- Radar ana siralamasi trader kararina gore: ALIMA EN YAKIN > ERKEN GUCLENME > TEYIT BEKLE > IZLE > KOVALAMA > UZAK DUR.
+- FIRSAT ve GUVEN puanlari ayrildi; celiski motoru eklendi.
+- NE BEKLIYOR? kosulu her coin icin yazilir.
+- # basligina tiklayinca BGM Trader ana siralamasina doner.
+- Radar # ve COIN sutunlari saga kaydirirken sabit kalir.
+- Mevcut teknik/Radar hesaplari korunur; Trader Motoru ust karar katmanidir.
+
+V0.6.63: MA99 full candle history, independent sentiment (explicit source), Trader Decision is single main decision; Radar DURUM removed.
+
+V0.6.63: Coin aramasi tum taranmis evrende calisir; dormant/hareket filtresi arama sonucunu gizlemez. Kural Tabanli Gozlemler, Trader Gozlemi olarak olumlu/risk-celiski/karar/beklenen yapisina gecirildi.
+
+V0.6.63: Trader Gozlemi kartlara ayrildi; olumlu/risk-karar/ne bekliyor bolumleri okunakli hale getirildi. Teyit Bekle durumunda beklenen kosullar mumkun oldugunda sayisal teyit esigi ve hacim/MACD kosullariyla yazilir.
+
+V0.6.63: Stop/Kar Hedefleri bolumune MANUEL RAKAM modu eklendi. Pozisyon tutari ve hedef TL/USDT kar-zarar girilince gerekli yuzde ile stop/hedef emir fiyatlari otomatik hesaplanir.
+
+V0.6.65: Yalnizca arayuz duzenlemesi. AI Butcesi karti kaldirildi; Secili Piyasa ve Stop/Kar Hedefleri iki kolon halinde tum satiri doldurur. Radar/Trader/veri hesaplama mantigi degistirilmedi.
+
+V0.6.65: Düşenler & Tepki bölümü Trader Tepki Motoru V1 oldu. Tepki Fırsatı ve Güven ayrıldı; karar hacim yönü, MACD ivmesi, likidite, VOL, RSI ve kısa fiyat dönüşünün birlikte teyidine göre verilir. Ne Bekliyor alanı eklendi. Radar/ana Trader/veri motoru değiştirilmedi.
