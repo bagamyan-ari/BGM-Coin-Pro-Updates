@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Yeni surum numarasi (ornek: 1.0.4)"
+        description: "Yeni surum numarasi (ornek: 1.0.5)"
         required: true
-        default: "1.0.4"
+        default: "1.0.5"
 
 permissions:
   contents: write
@@ -24,24 +24,39 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Surumu kaynak koda uygula
+      - name: Surum bilgisini hazirla
         shell: powershell
         run: |
           $version = "${{ inputs.version }}"
-
           Write-Host "BGM Coin Pro build version: $version"
 
-          # server.py icindeki APP_VERSION degerini degistir
-          $server = Get-Content "server.py" -Raw
-          $server = $server -replace 'APP_VERSION\s*=\s*["''][^"'']+["'']', "APP_VERSION = `"$version`""
-          Set-Content "server.py" $server -Encoding UTF8
+          # Kaynak dosyalardaki eski V1.x.x gorunumlerini yeni surume cevir.
+          $files = @(
+            "server.py",
+            "desktop_launcher.py",
+            "app.js",
+            "index.html"
+          )
 
-          # update_config.json icindeki current_version degerini degistir
-          $config = Get-Content "update_config.json" -Raw | ConvertFrom-Json
-          $config.current_version = $version
-          $config | ConvertTo-Json -Depth 10 | Set-Content "update_config.json" -Encoding UTF8
+          foreach ($file in $files) {
+            if (Test-Path $file) {
+              $content = Get-Content $file -Raw
+              $content = $content -replace 'V1\.\d+\.\d+', "V$version"
+              $content = $content -replace 'v1\.\d+\.\d+', "v$version"
+              $content = $content -replace '(?<![Vv])1\.\d+\.\d+', "$version"
+              Set-Content $file $content -Encoding UTF8
+              Write-Host "$file -> $version"
+            }
+          }
 
-          Write-Host "server.py ve update_config.json -> $version"
+          # Installer surumunu da guncelle.
+          if (Test-Path "BGM_Coin_Pro_Installer.iss") {
+            $iss = Get-Content "BGM_Coin_Pro_Installer.iss" -Raw
+            $iss = $iss -replace '#define MyAppVersion "[^"]+"', "#define MyAppVersion `"$version`""
+            $iss = $iss -replace 'AppVersion=[^\r\n]+', "AppVersion=$version"
+            Set-Content "BGM_Coin_Pro_Installer.iss" $iss -Encoding UTF8
+            Write-Host "Installer -> $version"
+          }
 
       - name: Python paketlerini kur
         shell: powershell
@@ -78,14 +93,16 @@ jobs:
         id: installer
         shell: powershell
         run: |
-          $file = Get-ChildItem -Path . -Recurse -Filter "BGM_Coin_Pro_Setup_*.exe" |
+          $version = "${{ inputs.version }}"
+
+          $file = Get-ChildItem -Path . -Recurse -Filter "*.exe" |
+            Where-Object { $_.Name -like "BGM_Coin_Pro_Setup*" } |
             Select-Object -First 1
 
           if (-not $file) {
             throw "BGM Coin Pro Setup EXE bulunamadi."
           }
 
-          $version = "${{ inputs.version }}"
           $newName = "BGM_Coin_Pro_Setup_$version.exe"
           $newPath = Join-Path $file.DirectoryName $newName
 
@@ -122,7 +139,7 @@ jobs:
             --title "BGM Coin Pro V$version" `
             --notes "BGM Coin Pro Desktop V$version"
 
-      - name: Manifest olustur
+      - name: Update manifest olustur
         shell: powershell
         run: |
           $version = "${{ inputs.version }}"
@@ -158,5 +175,6 @@ jobs:
           }
           else {
             git commit -m "Update manifest to V${{ inputs.version }}"
+            git pull --rebase
             git push
           }
