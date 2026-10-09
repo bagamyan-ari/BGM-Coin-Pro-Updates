@@ -1,6 +1,6 @@
-{
-  "version": "1.0.2",
-  "download_url": "https://github.com/bagamyan-ari/BGM-Coin-Pro-Updates/releases/download/v1.0.2/BGM_Coin_Pro_Setup_1.0.2.exe",
-  "sha256": "f4f9f7ae4ae9026594b0c56c0128d3167c7d8fd37b79599f622a4dc067311583",
-  "notes": "V1.0.2 - Favoriler, En Cok Cikanlar ve giris fiyati duzeltmeleri."
+﻿{
+    "version":  "1.0.3",
+    "download_url":  "https://github.com/bagamyan-ari/BGM-Coin-Pro-Updates/releases/download/v1.0.3/BGM_Coin_Pro_Setup_1.0.3.exe",
+    "sha256":  "e7e4c5ae8f6b890174f75262189113ef684cfff2b950f33343925ac616a3af6d",
+    "notes":  "BGM Coin Pro Desktop V1.0.3"
 }
