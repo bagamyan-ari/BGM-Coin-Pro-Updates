@@ -305,7 +305,20 @@ def indicators(item,exchange):
     breakout_wakeup=(vr>=1.50 and last_range_pct>=max(0.30,atr_pct*0.80) and hist>previous_hist)
     dormant=(not price_alive and not breakout_wakeup)
     movement_score=round(clamp(100*(0.34*clamp(atr_pct/2.00)+0.31*clamp(recent6_range_pct/5.50)+0.20*clamp(last_range_pct/2.00)+0.15*clamp((vr-0.70)/2.30)),0,100))
-    return {'atr':round(atr,8),'atr_pct':round(atr_pct,3),'recent_range_pct':round(recent6_range_pct,3),'last_range_pct':round(last_range_pct,3),'movement_score':movement_score,'dormant':dormant,'price_alive':price_alive,'breakout_wakeup':breakout_wakeup,'macd_hist_previous':round(previous_hist,8),'buy_volume_share':round(buy_share,1),'volume_direction':volume_direction,
+    # Desktop 1.0.12: actual closed-candle measurements, not fabricated proxy values.
+    rsi_previous=wilder_rsi(close[:-1])
+    volume_acceleration=mean(vol[-3:])/max(mean(vol[-13:-3]),1e-12)
+    compression_ratio=recent_range/max(prior_range,1e-12)
+    last_open=float(raw[-1][1]);last_high=high[-1];last_low=low[-1]
+    candle_span=max(last_high-last_low,1e-12)
+    body_pct=abs(price-last_open)/candle_span*100
+    upper_wick_pct=(last_high-max(price,last_open))/candle_span*100
+    lower_wick_pct=(min(price,last_open)-last_low)/candle_span*100
+    price_response_pct=(close[-1]/close[-4]-1)*100 if close[-4]>0 else 0
+    recent_down_candles=sum(float(c[4])<float(c[1]) for c in raw[-4:])
+    resistance_distance_pct=(resistance-price)/price*100 if price>0 else 0
+
+    return {'atr':round(atr,8),'atr_pct':round(atr_pct,3),'recent_range_pct':round(recent6_range_pct,3),'last_range_pct':round(last_range_pct,3),'movement_score':movement_score,'dormant':dormant,'price_alive':price_alive,'breakout_wakeup':breakout_wakeup,'rsi_previous':round(rsi_previous,2),'volume_acceleration':round(volume_acceleration,3),'compression_ratio':round(compression_ratio,3),'candle_body_pct':round(body_pct,2),'upper_wick_pct':round(upper_wick_pct,2),'lower_wick_pct':round(lower_wick_pct,2),'price_response_pct':round(price_response_pct,3),'recent_down_candles':recent_down_candles,'resistance_distance_pct':round(resistance_distance_pct,3),'macd_hist_previous':round(previous_hist,8),'buy_volume_share':round(buy_share,1),'volume_direction':volume_direction,
             'macd_direction':'artıyor' if hist>previous_hist else ('azalıyor' if hist<previous_hist else 'yatay'),
             'plan_valid':plan_valid,'plan_note':plan_note,'strategy_type':strategy_type,'strategy_reason':strategy_reason,'support_level':round(support_level,8),
             'plan_buy':round(reference_entry,8) if plan_valid else None,
@@ -756,7 +769,7 @@ def scan(exchange,force=False):
         with LOCK:CACHE[key]=(time.time(),result)
         return result
     finally:SCAN_LOCK.release()
-DESKTOP_VERSION='1.0.3'
+DESKTOP_VERSION='1.0.18'
 def _version_tuple(v):
     try:return tuple(int(x) for x in str(v).strip().lstrip('vV').split('.'))
     except:return (0,)

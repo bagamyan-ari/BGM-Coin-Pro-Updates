@@ -59,3 +59,9 @@
 .update-pill{margin-left:8px;border:1px solid #8a6729;background:#352815;color:#ffd77d;border-radius:12px;padding:5px 9px;font-size:9px;font-weight:900;letter-spacing:.5px;vertical-align:middle;cursor:pointer}.update-pill:hover{background:#49371b;color:#ffe5a6}.update-pill:disabled{opacity:.65;cursor:wait}
 
 .fav-star{background:transparent;border:0;color:#f6c453;font-size:20px;cursor:pointer;padding:2px 6px}.fav-star:hover{transform:scale(1.15)}
+
+/* V1.0.11 navigation + new trader views */
+[data-view-block].view-hidden{display:none!important}.special-radar{margin-top:16px}.special-radar table{min-width:1280px}.star-col{width:38px!important;min-width:38px!important;max-width:38px!important;padding-left:5px!important;padding-right:5px!important;text-align:center}.scroll-top{position:fixed;right:24px;bottom:24px;z-index:90;width:42px;height:42px;border-radius:50%;border:1px solid #35506a;background:#14283a;color:#dcecff;font-size:20px;cursor:pointer;display:none;box-shadow:0 8px 24px #0007}.scroll-top.show{display:block}th[data-sort],th[data-default]{cursor:pointer;user-select:none}#radar-panel th:nth-child(1),#radar-panel td:nth-child(1){width:48px;min-width:48px;max-width:48px}#radar-panel th:nth-child(2),#radar-panel td:nth-child(2){left:48px;width:38px;min-width:38px;max-width:38px;padding-left:5px;padding-right:5px}#radar-panel th:nth-child(3),#radar-panel td:nth-child(3){position:sticky;left:86px;z-index:5;background:#0d1825;min-width:150px;box-shadow:8px 0 12px -12px #000}#radar-panel tbody tr td:nth-child(3){background:#101c2b}#radar-panel tbody tr:hover td:nth-child(3),#radar-panel tbody tr.selected td:nth-child(3){background:#192c3b}#radar-panel thead th:nth-child(3){z-index:8}
+
+/* V1.0.13 */
+.radar-manual{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0 14px}.radar-manual .primary{padding:8px 12px;font-size:12px}.radar-manual small{color:#8da1b5}
