@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Yeni surum numarasi (ornek: 1.0.6)"
+        description: "Yeni surum numarasi (ornek: 1.0.7)"
         required: true
-        default: "1.0.6"
+        default: "1.0.7"
 
 permissions:
   contents: write
@@ -24,11 +24,150 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Build surumunu goster
-        shell: powershell
+      # ---------------------------------------------------------
+      # SURUM NUMARASI
+      # server.py UTF-8 olarak okunur ve yine UTF-8 olarak yazilir.
+      # app.js / index.html / style.css dosyalarina DOKUNULMAZ.
+      # ---------------------------------------------------------
+      - name: Surumu server.py icine guvenli uygula
+        shell: python
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          Write-Host "BGM Coin Pro build version: ${{ inputs.version }}"
-          Write-Host "Kaynak dosyalara dokunulmuyor - UTF8 korunuyor."
+          from pathlib import Path
+          import os
+          import re
+
+          version = os.environ["VERSION"]
+          path = Path("server.py")
+
+          text = path.read_text(encoding="utf-8")
+
+          new_text, count = re.subn(
+              r"DESKTOP_VERSION\s*=\s*['\"][^'\"]+['\"]",
+              f"DESKTOP_VERSION='{version}'",
+              text,
+              count=1
+          )
+
+          if count != 1:
+              raise SystemExit(
+                  "HATA: server.py icinde DESKTOP_VERSION satiri bulunamadi."
+              )
+
+          path.write_text(
+              new_text,
+              encoding="utf-8",
+              newline="\n"
+          )
+
+          print(f"BGM Coin Pro build version: {version}")
+          print("server.py UTF-8 korunarak guncellendi.")
+
+      # ---------------------------------------------------------
+      # TURKCE KARAKTER KONTROLU
+      # Build'den once kaynakta mojibake varsa islemi durdurur.
+      # ---------------------------------------------------------
+      - name: Turkce karakter kontrolu
+        shell: python
+        run: |
+          from pathlib import Path
+
+          files = [
+              "server.py",
+              "app.js",
+              "index.html",
+              "style.css",
+          ]
+
+          bad_sequences = [
+              "Ã¼",
+              "Ã¶",
+              "Ã§",
+              "Ä±",
+              "Ä°",
+              "ÅŸ",
+              "ÄŸ",
+              "Ãœ",
+              "Ã–",
+              "Ã‡",
+              "Åž",
+              "Äž",
+          ]
+
+          problems = []
+
+          for filename in files:
+              path = Path(filename)
+
+              if not path.exists():
+                  print(f"Bilgi: {filename} bulunamadi, kontrol atlandi.")
+                  continue
+
+              text = path.read_text(encoding="utf-8")
+
+              found = [
+                  seq for seq in bad_sequences
+                  if seq in text
+              ]
+
+              if found:
+                  problems.append(
+                      f"{filename}: {', '.join(found)}"
+                  )
+
+          if problems:
+              print("TURKCE KARAKTER BOZUKLUGU TESPIT EDILDI:")
+              for problem in problems:
+                  print(problem)
+
+              raise SystemExit(
+                  "Build durduruldu. Kaynak dosyalarda mojibake var."
+              )
+
+          print("Turkce karakter kontrolu BASARILI.")
+          print("Kaynak dosyalar UTF-8 olarak temiz gorunuyor.")
+
+      # ---------------------------------------------------------
+      # SURUM KONTROLU
+      # Yanlis surumle EXE uretilmesini engeller.
+      # ---------------------------------------------------------
+      - name: Surum numarasini dogrula
+        shell: python
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          from pathlib import Path
+          import os
+          import re
+
+          expected = os.environ["VERSION"]
+
+          text = Path("server.py").read_text(
+              encoding="utf-8"
+          )
+
+          match = re.search(
+              r"DESKTOP_VERSION\s*=\s*['\"]([^'\"]+)['\"]",
+              text
+          )
+
+          if not match:
+              raise SystemExit(
+                  "DESKTOP_VERSION bulunamadi."
+              )
+
+          actual = match.group(1)
+
+          print(f"Beklenen surum : {expected}")
+          print(f"server.py surum: {actual}")
+
+          if actual != expected:
+              raise SystemExit(
+                  f"Surum uyusmazligi: {actual} != {expected}"
+              )
+
+          print("Surum kontrolu BASARILI.")
 
       - name: Python paketlerini kur
         shell: powershell
@@ -36,16 +175,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyinstaller pywebview requests
 
+      # ---------------------------------------------------------
+      # ANA PROGRAM
+      # ---------------------------------------------------------
       - name: BGM Coin Pro EXE olustur
         shell: powershell
         run: |
           pyinstaller --clean --noconfirm BGM_Coin_Pro.spec
 
+      # ---------------------------------------------------------
+      # UPDATER
+      # ---------------------------------------------------------
       - name: BGM Updater EXE olustur
         shell: powershell
         run: |
           pyinstaller --clean --noconfirm BGM_Updater.spec
 
+      # ---------------------------------------------------------
+      # INNO SETUP
+      # ---------------------------------------------------------
       - name: Inno Setup ile Setup EXE olustur
         shell: powershell
         run: |
@@ -61,15 +209,30 @@ jobs:
 
           & $iscc "BGM_Coin_Pro_Installer.iss"
 
-      - name: Installer dosyasini bul
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup build basarisiz."
+          }
+
+      # ---------------------------------------------------------
+      # INSTALLER'I BUL / SURUM ADI VER / SHA256 HESAPLA
+      # ---------------------------------------------------------
+      - name: Installer dosyasini hazirla
         id: installer
         shell: powershell
         run: |
           $version = "${{ inputs.version }}"
 
           $file = Get-ChildItem -Path . -Recurse -Filter "*.exe" |
-            Where-Object { $_.Name -like "BGM_Coin_Pro_Setup*" } |
+            Where-Object {
+              $_.Name -like "BGM_Coin_Pro_Setup*" -and
+              $_.Name -notlike "*_$version.exe"
+            } |
             Select-Object -First 1
+
+          if (-not $file) {
+            $file = Get-ChildItem -Path . -Recurse -Filter "BGM_Coin_Pro_Setup*.exe" |
+              Select-Object -First 1
+          }
 
           if (-not $file) {
             throw "BGM Coin Pro Setup EXE bulunamadi."
@@ -78,9 +241,17 @@ jobs:
           $newName = "BGM_Coin_Pro_Setup_$version.exe"
           $newPath = Join-Path $file.DirectoryName $newName
 
-          Copy-Item $file.FullName $newPath -Force
+          if ($file.FullName -ne $newPath) {
+            Copy-Item $file.FullName $newPath -Force
+          }
 
-          $hash = (Get-FileHash $newPath -Algorithm SHA256).Hash.ToLower()
+          if (-not (Test-Path $newPath)) {
+            throw "Yeni installer dosyasi olusturulamadi."
+          }
+
+          $hash = (
+            Get-FileHash $newPath -Algorithm SHA256
+          ).Hash.ToLower()
 
           "path=$newPath" >> $env:GITHUB_OUTPUT
           "name=$newName" >> $env:GITHUB_OUTPUT
@@ -89,6 +260,9 @@ jobs:
           Write-Host "Installer: $newName"
           Write-Host "SHA256: $hash"
 
+      # ---------------------------------------------------------
+      # ARTIFACT
+      # ---------------------------------------------------------
       - name: Setup artifact yukle
         uses: actions/upload-artifact@v4
         with:
@@ -96,6 +270,9 @@ jobs:
           path: ${{ steps.installer.outputs.path }}
           if-no-files-found: error
 
+      # ---------------------------------------------------------
+      # GITHUB RELEASE
+      # ---------------------------------------------------------
       - name: GitHub Release olustur
         shell: powershell
         env:
@@ -107,29 +284,69 @@ jobs:
 
           gh release create $tag $installer `
             --title "BGM Coin Pro V$version" `
-            --notes "BGM Coin Pro Desktop V$version"
+            --notes "BGM Coin Pro Desktop V$version - UTF-8 Turkce karakter duzeltmesi"
 
-      - name: Update manifest olustur
-        shell: powershell
-        run: |
-          $version = "${{ inputs.version }}"
-          $fileName = "${{ steps.installer.outputs.name }}"
-          $sha = "${{ steps.installer.outputs.sha256 }}"
-          $repo = "${{ github.repository }}"
-
-          $downloadUrl = "https://github.com/$repo/releases/download/v$version/$fileName"
-
-          $manifest = [ordered]@{
-            version = $version
-            download_url = $downloadUrl
-            sha256 = $sha
-            notes = "BGM Coin Pro Desktop V$version"
+          if ($LASTEXITCODE -ne 0) {
+            throw "GitHub Release olusturulamadi."
           }
 
-          $manifest |
-            ConvertTo-Json |
-            Set-Content "update_manifest.json" -Encoding UTF8
+      # ---------------------------------------------------------
+      # UPDATE MANIFEST
+      # PowerShell Set-Content KULLANMIYORUZ.
+      # JSON Python tarafindan UTF-8 yaziliyor.
+      # ---------------------------------------------------------
+      - name: Update manifest olustur
+        shell: python
+        env:
+          VERSION: ${{ inputs.version }}
+          INSTALLER_NAME: ${{ steps.installer.outputs.name }}
+          INSTALLER_SHA256: ${{ steps.installer.outputs.sha256 }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          from pathlib import Path
+          import json
+          import os
 
+          version = os.environ["VERSION"]
+          filename = os.environ["INSTALLER_NAME"]
+          sha256 = os.environ["INSTALLER_SHA256"]
+          repo = os.environ["REPOSITORY"]
+
+          download_url = (
+              f"https://github.com/{repo}/releases/download/"
+              f"v{version}/{filename}"
+          )
+
+          manifest = {
+              "version": version,
+              "download_url": download_url,
+              "sha256": sha256,
+              "notes": (
+                  f"BGM Coin Pro Desktop V{version} - "
+                  "Turkce karakter ve surum sistemi duzeltmesi."
+              )
+          }
+
+          Path("update_manifest.json").write_text(
+              json.dumps(
+                  manifest,
+                  ensure_ascii=False,
+                  indent=2
+              ) + "\n",
+              encoding="utf-8",
+              newline="\n"
+          )
+
+          print("Manifest hazirlandi:")
+          print(json.dumps(
+              manifest,
+              ensure_ascii=False,
+              indent=2
+          ))
+
+      # ---------------------------------------------------------
+      # MANIFEST'I REPO'YA KAYDET
+      # ---------------------------------------------------------
       - name: Manifest GitHub'a kaydet
         shell: powershell
         run: |
@@ -143,3 +360,15 @@ jobs:
             git pull --rebase
             git push
           }
+
+      # ---------------------------------------------------------
+      # SON KONTROL
+      # ---------------------------------------------------------
+      - name: Build tamamlandi
+        shell: powershell
+        run: |
+          Write-Host "======================================"
+          Write-Host " BGM COIN PRO V${{ inputs.version }}"
+          Write-Host " BUILD TAMAMLANDI"
+          Write-Host " UTF-8 KORUNDU"
+          Write-Host "======================================"
