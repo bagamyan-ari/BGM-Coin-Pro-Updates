@@ -769,7 +769,7 @@ def scan(exchange,force=False):
         with LOCK:CACHE[key]=(time.time(),result)
         return result
     finally:SCAN_LOCK.release()
-DESKTOP_VERSION='1.0.18'
+DESKTOP_VERSION='1.0.21'
 def _version_tuple(v):
     try:return tuple(int(x) for x in str(v).strip().lstrip('vV').split('.'))
     except:return (0,)

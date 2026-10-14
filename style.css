@@ -65,3 +65,17 @@
 
 /* V1.0.13 */
 .radar-manual{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0 14px}.radar-manual .primary{padding:8px 12px;font-size:12px}.radar-manual small{color:#8da1b5}
+
+/* V1.0.19: manual amount grid alignment; preserve existing layout footprint */
+#amount-plan-inputs{grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:8px}
+#amount-plan-inputs>span{display:flex;flex-direction:column;justify-content:flex-end;min-width:0;min-height:48px;white-space:nowrap;font-size:9px;line-height:14px}
+#amount-plan-inputs>span>input{box-sizing:border-box;width:100%!important;min-width:0;max-width:none!important;height:30px!important;margin:4px 0 0!important;text-align:center}
+@media(max-width:650px){#amount-plan-inputs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.bgm-alarm-toggle{border:1px solid #3d6478;background:#14293b;color:#d5eaf7;border-radius:8px;padding:7px 10px;font-size:11px;cursor:pointer;margin-left:10px}
+.bgm-alarm-toggle[aria-pressed=true]{border-color:#50dca1;color:#50dca1}
+.bgm-alarm-status{font-size:10px;color:#9fb6c7;margin:5px 0 0}
+
+/* V1.0.20: preserve existing layout, align manual amount labels and inputs */
+#amount-plan-inputs>span{align-items:stretch;text-align:center;white-space:normal;min-height:54px;justify-content:end}
+#amount-plan-inputs>span>input{flex-shrink:0}
+#bgm-h1-comparison{font-size:11px;line-height:1.5;margin:7px 0}
